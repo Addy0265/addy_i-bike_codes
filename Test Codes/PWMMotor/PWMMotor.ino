@@ -4,8 +4,8 @@
 // 100RPM at PERIOD=6000, 10RPM at PERIOD=60000, Rest vary linearly
 #define PERIOD 60000
 #define OPT 1
-#define DEG 10
-#define DIR 1
+#define DEG 5
+#define DIR -1
 
 #define LEDPIN 13
 #define PULPIN 11

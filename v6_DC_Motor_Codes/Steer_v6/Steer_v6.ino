@@ -11,11 +11,11 @@
 #define MAX_RESP_TIME_MS 40      // timeout - max time to wait for low voltage drop (higher value increases measuring distance at the price of slower sampling)
 #define DELAY_BETWEEN_TESTS_US 200 // echo cancelling time between sampling
 
-#define THRESHOLD 30
+#define THRESHOLD 10
 #define STOPPING_THRESHOLD 50
 
-#define LEAST_COUNT 5
-#define LEAST_COUNT_HEADING 6
+#define LEAST_COUNT 6
+#define LEAST_COUNT_HEADING 5
 
 #define ANGLE_LIMIT 12
 #define ANGLE_LIMIT_HEADING 12
@@ -23,14 +23,17 @@
 #define THETA_LIMIT 40
 #define DIST_LIMIT 500
 
-#define SLOW_DUTY 100
-#define MEDIUM_DUTY 160
-#define FAST_DUTY 200
-#define ULTRAFAST_DUTY 250
+#define SLOW_DUTY 50
+#define MEDIUM_DUTY 80
+#define FAST_DUTY 100
+#define ULTRAFAST_DUTY 220
 #define BRAKE 0
 
-#define LIMIT1 (10 + LEAST_COUNT_HEADING)
-#define LIMIT2 (30 + LEAST_COUNT_HEADING)
+#define RETURN_LIMIT1 (15 + LEAST_COUNT)
+#define RETURN_LIMIT2 (30 + LEAST_COUNT)
+
+#define RETRACE_LIMIT1 (15 + LEAST_COUNT_HEADING)
+#define RETRACE_LIMIT2 (30 + LEAST_COUNT_HEADING)
 
 // Pin Declarations for DC Servo
 //#define PULPIN 11
@@ -429,11 +432,33 @@ void returnToZeroPosition()
       Serial.print("  Returning");
     if(currentAngle < 0)
     {
-      driveMotor(-MEDIUM_DUTY);
+      if(abs(currentAngle) < RETURN_LIMIT1)
+      {
+       driveMotor(-SLOW_DUTY);
+      }
+      else if(abs(currentAngle) < RETURN_LIMIT2)
+      {
+       driveMotor(-MEDIUM_DUTY);
+      }
+      else
+      {
+        driveMotor(-FAST_DUTY);
+      }
     }
     else
     {
-      driveMotor(MEDIUM_DUTY);
+      if(abs(currentAngle) < RETURN_LIMIT1)
+      {
+       driveMotor(SLOW_DUTY);
+      }
+      else if(abs(currentAngle) < RETURN_LIMIT2)
+      {
+       driveMotor(MEDIUM_DUTY);
+      }
+      else
+      {
+        driveMotor(FAST_DUTY);
+      }
     }
   } 
   else
@@ -522,12 +547,12 @@ void returnToGoalHeading()
     {
       if (currentAngle > -ANGLE_LIMIT_HEADING)
         {
-          if(abs(err_heading) < LIMIT1)
+          if(abs(err_heading) < RETRACE_LIMIT1)
           {
            Serial.print("  Going Slow Left");
            driveMotor(SLOW_DUTY);
           }
-          else if(abs(err_heading) < LIMIT2)
+          else if(abs(err_heading) < RETRACE_LIMIT2)
           {
            Serial.print("  Going Medium Left");
            driveMotor(MEDIUM_DUTY);
@@ -547,12 +572,12 @@ void returnToGoalHeading()
     {
       if (currentAngle < ANGLE_LIMIT_HEADING)
         {
-          if(abs(err_heading) < LIMIT1)
+          if(abs(err_heading) < RETRACE_LIMIT1)
           {
            Serial.print("  Going Slow Right");
            driveMotor(-SLOW_DUTY);
           }
-          else if(abs(err_heading) < LIMIT2)
+          else if(abs(err_heading) < RETRACE_LIMIT2)
           {
            Serial.print("  Going Medium Right");
            driveMotor(-MEDIUM_DUTY);
