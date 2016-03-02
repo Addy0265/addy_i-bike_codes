@@ -1,4 +1,3 @@
-
 #define F_CPU 16000000
 #include <avr/io.h>
 #include <avr/wdt.h>
@@ -14,26 +13,32 @@
 #define THRESHOLD 10
 #define STOPPING_THRESHOLD 50
 
-#define LEAST_COUNT 6
+#define LEAST_COUNT 3
 #define LEAST_COUNT_HEADING 5
 
-#define ANGLE_LIMIT 12
-#define ANGLE_LIMIT_HEADING 12
+#define L_ANGLE_LIMIT 9
+#define R_ANGLE_LIMIT 7
+#define L_ANGLE_LIMIT_HEADING 9
+#define R_ANGLE_LIMIT_HEADING 7
 
 #define THETA_LIMIT 40
 #define DIST_LIMIT 500
 
-#define SLOW_DUTY 50
-#define MEDIUM_DUTY 80
-#define FAST_DUTY 100
-#define ULTRAFAST_DUTY 220
+#define ULTRA_SLOW_DUTY 50
+#define SLOW_DUTY 70
+#define MEDIUM_DUTY 100
+#define FAST_DUTY 120
+#define ULTRAFAST_DUTY 150
 #define BRAKE 0
 
-#define RETURN_LIMIT1 (15 + LEAST_COUNT)
-#define RETURN_LIMIT2 (30 + LEAST_COUNT)
+#define TURNING_LIMIT1 4
+#define TURNING_LIMIT2 6
 
-#define RETRACE_LIMIT1 (15 + LEAST_COUNT_HEADING)
-#define RETRACE_LIMIT2 (30 + LEAST_COUNT_HEADING)
+#define RETURN_LIMIT1 10
+#define RETURN_LIMIT2 30
+
+#define RETRACE_LIMIT1 12
+#define RETRACE_LIMIT2 30
 
 // Pin Declarations for DC Servo
 //#define PULPIN 11
@@ -470,11 +475,11 @@ void returnToZeroPosition()
 
 void followCameraOutput()
 {
-  if(theta < 0 && abs(currentAngle) < ANGLE_LIMIT)
+  if(theta < 0 && abs(currentAngle) < R_ANGLE_LIMIT)
   {
     driveMotor(-MEDIUM_DUTY); // Check direction 1 or -1
   }
-  else if(theta > 0 && abs(currentAngle) < ANGLE_LIMIT)
+  else if(theta > 0 && abs(currentAngle) < L_ANGLE_LIMIT)
   {
     driveMotor(MEDIUM_DUTY); // Check direction 1 or -1
   }
@@ -496,15 +501,41 @@ void planPath()
   }
   else
   {
-    if(sonarOut == RIGHT && /*abs(theta) < THETA_LIMIT &&*/ abs(currentAngle) < ANGLE_LIMIT && abs(currentAngle) != 1000) 
+    if(sonarOut == RIGHT && /*abs(theta) < THETA_LIMIT &&*/ abs(currentAngle) < R_ANGLE_LIMIT && abs(currentAngle) != 1000) 
     {
-        //turn right to avoid obstacle
-        driveMotor(-MEDIUM_DUTY); // Check direction 1 or -1
+        if(abs(currentAngle) < TURNING_LIMIT1)
+          {
+           Serial.print("  Going Medium Right");
+           driveMotor(-MEDIUM_DUTY);
+          }
+          else if(abs(currentAngle) < TURNING_LIMIT2)
+          {
+           Serial.print("  Going Slow Right");
+           driveMotor(-SLOW_DUTY);
+          }
+          else 
+          {
+           Serial.print("  Going Ultra Slow Right");
+           driveMotor(-ULTRA_SLOW_DUTY);
+          }
     }
-    else if(sonarOut == LEFT && /*abs(theta) < THETA_LIMIT &&*/ abs(currentAngle) < ANGLE_LIMIT && abs(currentAngle) != 1000)
+    else if(sonarOut == LEFT && /*abs(theta) < THETA_LIMIT &&*/ abs(currentAngle) < L_ANGLE_LIMIT && abs(currentAngle) != 1000)
     {
-        //turn left to avoid obstacle
-        driveMotor(MEDIUM_DUTY); // Check direction 1 or -1
+        if(abs(currentAngle) < RETURN_LIMIT1)
+          {
+           Serial.print("  Going Medium Left");
+           driveMotor(MEDIUM_DUTY);
+          }
+          else if(abs(currentAngle) < RETURN_LIMIT2)
+          {
+           Serial.print("  Going Slow Left");
+           driveMotor(SLOW_DUTY);
+          }
+           else 
+          {
+           Serial.print("  Going Ultra Slow Left");
+           driveMotor(ULTRA_SLOW_DUTY);
+          }
     }
     else if(sonarOut == AMBIGIOUS)
     {
@@ -545,7 +576,7 @@ void returnToGoalHeading()
    
     if(err_heading < 0)
     {
-      if (currentAngle > -ANGLE_LIMIT_HEADING)
+      if (currentAngle > -L_ANGLE_LIMIT_HEADING)
         {
           if(abs(err_heading) < RETRACE_LIMIT1)
           {
@@ -570,7 +601,7 @@ void returnToGoalHeading()
     }
     else if (err_heading > 0)
     {
-      if (currentAngle < ANGLE_LIMIT_HEADING)
+      if (currentAngle < R_ANGLE_LIMIT_HEADING)
         {
           if(abs(err_heading) < RETRACE_LIMIT1)
           {

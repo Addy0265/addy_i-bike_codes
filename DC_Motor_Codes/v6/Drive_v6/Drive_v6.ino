@@ -476,8 +476,10 @@ void updateSteerAngle()
 void sendAngleDatatoSteer()
 {
   Serial1.write(255);
-  Serial1.write((int)averageHandleAngle); 
-  Serial1.write((int)heading);
+//  Serial1.write((int)averageHandleAngle); 
+//  Serial1.write((int)heading);
+  Serial1.write(0);
+  Serial1.write(0);  
   Serial1.write(254);
 }
 
