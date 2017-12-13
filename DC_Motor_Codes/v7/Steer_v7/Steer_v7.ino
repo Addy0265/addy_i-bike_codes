@@ -470,6 +470,7 @@ void planPath()
     }
     else if(sonarOut == AMBIGIOUS)
     {
+       driveMotor(0);
        setPin(STOP_DRIVE);
     }
     else

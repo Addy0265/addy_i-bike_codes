@@ -20,14 +20,12 @@
 #define BRAKE_PIN_P 9  
 #define BRAKE_PIN_N 10
 
-
 float alpha = 23 * PI_APP/180 , beta = 15 * PI_APP/180 ;
-
 int count1=0,count2=20;
 bool brakeFlag;
 
-const int MPU_H = 0x69;  // HANDLE/SEAT  IMU set AD0 to logic high for 0x69
-const int MPU_S = 0x68;  // STEER IMU 
+const int MPU_H = 0x68;  // HANDLE/SEAT  IMU set AD0 to logic high for 0x69
+const int MPU_S = 0x69;  // STEER IMU 
 const int PCF8591 = 0x48;  // Drive motor DAC module address
 
 /* IMU raw Data */
@@ -44,13 +42,8 @@ double compAngleX, compAngleY, compAngleZ,compAngleZ0;// Calculated angle using 
 double heading = 0;
 bool heading_first_data = true;
 
-//For steer IMU
-double compAngleSteer0; // Base angle
-double compAngleSteer; // Calculated angle using a complementary filter
-int steer_angle_count = 0;  // keeps count 
-
 volatile int averageHandleAngle = 0;
-double PreviousSteer = 0;
+double PreviousHeading = 0;
 
 /**** Variables for moving average filter ****/
 const int numReadings = 10;
@@ -78,17 +71,12 @@ String inputString1 = "";         // a string to hold incoming data
 boolean stringComplete1 = false;  // whether the string is complete
 String lati_str = "", longi_str = "";
 
-
 float target_lati = 0, target_longi = 0;
-
 
 volatile int start_time = 0, current_time = 0;
 int durationFlag = 0;
 
 boolean drive_flag = true;
-/****************************************************/
-
-/*************************************** GPS funcitons ******************************************************/
 
 // Calculates distance between (gpsLat0,gpsLong0) and (gpsLat,gpsLong) 
 void Distance(float gpsLat0, float gpsLong0, float gpsLat, float gpsLong)
@@ -99,10 +87,8 @@ void Distance(float gpsLat0, float gpsLong0, float gpsLat, float gpsLong)
 //  if (g_first_data >= gps_count)
     {
       Serial.print("Distance :"); Serial.print(g_distance); Serial.print("\t");
-//      Serial.print("For  "); Serial.print(gpsLat0); Serial.print(gpsLong0); Serial.print(gpsLat);Serial.print(gpsLong);
     }
 }
-
 
 void serialEvent2()
 {
@@ -123,8 +109,7 @@ void serialEvent2()
      }
      
      if(inchar == '\n')
-     inputString2 = "";     
-    
+     inputString2 = "";         
    }
 }
 
@@ -182,9 +167,6 @@ void getlatilongi(String input)
   
 }
 
-
-/*********************************************************************************/
-
 void gpsInit()
 {
   for(int i=0;i<10;i++)                  //initializing total array zero string to avoid producing garbage values
@@ -210,8 +192,7 @@ void printGPSData()
 void gps_conditioning()
 {
    if (stringComplete2 == true)
-  {
-   
+  {   
     getlatilongi(wantedstring);
     stringComplete2 = false;
     wantedstring = "";
@@ -245,13 +226,11 @@ void parse1()
 }
 
 void serialEvent1() {
-  while (Serial1.available()) {
-    // get the new byte:
+  while (Serial1.available())
+  {
     char inChar = (char)Serial1.read(); 
-    // add it to the inputString:
     inputString1 += inChar;
-    // if the incoming character is a newline, set a flag
-    // so the main loop can do something about it:
+
     if (inChar == '$') {
       stringComplete1 = true;
     } 
@@ -262,19 +241,17 @@ void _print()
 {
       //Serial.print("Lati_from_PI : "); Serial.print(lati_str);
       //Serial.print("\t Longi_from_PI : "); Serial.print(longi_str);
-      Serial.print("\t Data from PI ");
-      Serial.print("\t handle angle : "); Serial.print(averageHandleAngle);
-      Serial.print("\t heading angle : "); Serial.print(heading);  
-      //Serial.println();
-
+//      Serial.print("\t Data from PI ");
+//      Serial.print("\t handle angle : "); Serial.print(averageHandleAngle);
+      Serial.print("\t heading angle : "); Serial.println(heading);  
 }
 
 void handleGPSData()
 {
    // print the string when a newline arrives:
-  if (stringComplete1) {
+  if (stringComplete1) 
+  {
    // Serial.println(inputString1); 
-    // clear the string:
     parse1();
     _print();
     inputString1 = "";
@@ -284,10 +261,6 @@ void handleGPSData()
   }
 }
 
-
-/***********************************************************END GPS function **************************************/
-
-/*********************************************************** Motor drive function ********************************/
 void controlDrive(int digitalSpeed)
 {                                                                                                                                                                                                                                                                                             
  Wire.beginTransmission(PCF8591); // wake up PCF8591
@@ -298,90 +271,48 @@ void controlDrive(int digitalSpeed)
 
 void stopMotor()
 {
-
-
   
 }
 
-
-/*********************************************************** END Motor drive function ********************************/
-
-/*********************************************************** IMU functions *******************************************/
 void getMPUdata(int address)
 {
-  
   Wire.beginTransmission(address);
   Wire.write(0x3B);                         // starting with register 0x3B (ACCEL_XOUT_H)
   Wire.endTransmission(false);
   Wire.requestFrom(address, 14, true);          // request a total of 14 registers
   
-  if (Wire.available()){
   accX    = Wire.read() << 8 | Wire.read(); // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
   accY    = Wire.read() << 8 | Wire.read(); // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
   accZ    = Wire.read() << 8 | Wire.read(); // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
   tempRaw = Wire.read() << 8 | Wire.read(); // 0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L)
   gyroX   = Wire.read() << 8 | Wire.read(); // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
   gyroY   = Wire.read() << 8 | Wire.read(); // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-  gyroZ   = Wire.read() << 8 | Wire.read(); // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
-  
-  digitalWrite(STEER_BRAKE,LOW);
-  
-  }
-  else
-  {
-  
-   digitalWrite(STEER_BRAKE,HIGH);
-  }
-   
+  gyroZ   = Wire.read() << 8 | Wire.read(); // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L) 
 }
+
+
 // alpha 23 beta 15
 void getRPY(int address)
 {
   getMPUdata(address);
-if (address == MPU_S)
-  { double num = 16384*sin(alpha)*(double)accY; 
-    double den = ( ( (double)accX*cos(beta) + (double)accZ*sin(beta) ) * ( (double)accX*cos(beta) + (double)accZ*sin(beta) ) + (double)accY*(double)accY );
-  // yaw = asin( num / den  )*180/PI_APP;
-  yaw = atan2(-1*(double)accY,(double)accX)*180/PI_APP;
-//  Serial.print("  num   ");
-//  Serial.print(sin(alpha));
-//  Serial.print("  den  ");
-//  Serial.print(beta);
-//  Serial.print("  y   ");
-//  Serial.print(accY);
-//  Serial.print("  x   ");
-//  Serial.print(accX);
-//  Serial.print("  z   ");
-//  Serial.print(accZ);
-// 
   
-//  Serial.print("  yaw   ");
-//  Serial.println(yaw);
-  }
-else
-{
-// Serial.print("  y   ");
-//  Serial.print(accY);
-//  Serial.print("  x   ");
-//  Serial.print(accX);
+  #ifdef RESTRICT_PITCH 
+    roll  = atan2(accY, accZ) * 180/PI_APP;
+    pitch = atan(-accX / sqrt(accY * accY + accZ * accZ)) * 180/PI_APP;
   
-#ifdef RESTRICT_PITCH 
-  roll  = atan2(accY, accZ) * 180/PI_APP;
-  pitch = atan(-accX / sqrt(accY * accY + accZ * accZ)) * 180/PI_APP;
-
-
-#else 
-  roll = atan(accY / sqrt(accX * accX + accZ * accZ)) * 180/PI_APP;
-  pitch = atan2(-accX, accZ) * 180/PI_APP;
-
-#endif
-
-#ifdef ACCEL_YAW 
-  yaw = atan2(-1*(double)accY, (double)accX) * 180 / PI_APP;
-
-#endif
+  
+  #else 
+    roll = atan(accY / sqrt(accX * accX + accZ * accZ)) * 180/PI_APP;
+    pitch = atan2(-accX, accZ) * 180/PI_APP;
+  
+  #endif
+  
+  #ifdef ACCEL_YAW 
+    yaw = atan2(-1*(double)accY, (double)accX) * 180 / PI_APP;
+  
+  #endif
 } 
-}
+
 
 double MagYaw()
 {
@@ -403,19 +334,13 @@ double transformAngle(double baseAngle, double currentAngle)
 {
   double angle = (baseAngle - currentAngle)*PI_APP/180;
   angle = atan2(sin(angle),cos(angle))*180/PI_APP;
-  
-#if 0
-  Serial.print(" Angle : "); Serial.print(angle); Serial.print("\t");
-  Serial.print(" Base angle : "); Serial.print(baseAngle); Serial.print("\t");
-  Serial.print(" Current angle : "); Serial.print(currentAngle); Serial.print("\t");    
-#endif
 
   return angle;
 }
 
-/*** Heading IMU update ***/
-void updateRollPitchYaw() {
-
+// Heading IMU update
+void updateRollPitchYaw() 
+{
   getRPY(MPU_H);  
 
   double gyroXrate = gyroX / 131.0; // Convert to deg/s
@@ -424,168 +349,78 @@ void updateRollPitchYaw() {
 
   double dt = (double)(micros() - timer) / 1000000; // Calculate delta time
   timer = micros();
- 
-/********************  Complementary filter   **********************/
-/* compAngel + gyrorate*dt = gyro part */
-/* roll, pitch, yaw = accelerometer part */
 
-  compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * roll;
-  compAngleY = 0.93 * (compAngleY + gyroYrate * dt) + 0.07 * pitch;
+  compAngleX = 0.95 * (compAngleX + gyroXrate * dt) + 0.05 * roll;
+  compAngleY = 0.95 * (compAngleY + gyroYrate * dt) + 0.05 * pitch;
  
-#ifdef ACCEL_YAW 
-  compAngleZ = 0.93 * (compAngleZ + gyroZrate * dt) + 0.07 * yaw;
-  
-#else 
-  compAngleZ = 0.93 * (compAngleZ + gyroZrate * dt) + 0.07 * MagYaw();
-  
-#endif
+  #ifdef ACCEL_YAW 
+    compAngleZ = 0.90*(compAngleZ + gyroZrate * dt) + 0.1*yaw;
+    
+  #else 
+    compAngleZ = 0.95*(compAngleZ + gyroZrate * dt) + 0.05*MagYaw();
+  #endif
 
- if (heading_first_data)
+  if (heading_first_data)
   {
     compAngleZ0 = compAngleZ;
     heading_first_data = false;
   }
 
-heading = transformAngle(compAngleZ, compAngleZ0);
- 
-
-#if 0
-  //Serial.print("Roll : ");Serial.print(compAngleX); Serial.print('\t');
-  //Serial.print("Pitch : "); Serial.print(compAngleY); Serial.print('\t');
-  //  Serial.print("compAngleZ : "); Serial.print(compAngleZ);Serial.print('\t');
-  Serial.print("Heading : "); Serial.print(heading);
-  Serial.print("\t Handle Angle:"); Serial.println(averageHandleAngle);
-#endif
-
+  heading = transformAngle(compAngleZ, compAngleZ0);
+   
+  if (abs(heading - PreviousHeading) > 5 )
+    {
+      heading = PreviousHeading;
+    }
+    
+    PreviousHeading = heading;
 }
 
-
-/*** Steer IMU angle update ***/
-void updateSteerAngle()
-{
-  /* Update all values */
-  getRPY(MPU_S);
-  
-  /* Calculation of omega from gyro */
-  double gyroZrate =  gyroZ / 131.0;
-
-  /* Calculate Zangle using complimentary filter */
-  compAngleSteer = 0.93 * (compAngleSteer + gyroZrate * dt_s) + 0.0 * yaw;
-
-  Serial.print("  compAngleSteer  : ");
-  Serial.println(compAngleSteer);
-  /* Calculate yaw after 100th reading onwards*/
-  if (steer_angle_count == 100)
-    compAngleSteer0 = compAngleSteer;
-    
-  if (steer_angle_count >= 100)
-  {    
-    double currentSteer = transformAngle(compAngleSteer0, compAngleSteer);   
-    //Serial.print("currentSteer : "); Serial.print(currentSteer); Serial.print("\t"); 
-    
-    #if 0
-    Serial.print("currentSteer : "); Serial.print(currentSteer); Serial.print("\t");
-    Serial.print(" Previous Steer : "); Serial.print(PreviousSteer);  Serial.println("\t");
-    #endif
-    
-    //subtract the last reading
-    total = total - readings[readIndex];
-    //take new reading
-    readings[readIndex] = currentSteer;
-    
-    total = total + readings[readIndex];
-    readIndex = readIndex + 1;
-
-    // if we're at the end of the array...
-    if (readIndex >= numReadings) {
-        // ...wrap around to the beginning:
-        readIndex = 0;
-     }
-    // calculate the average:
-    averageHandleAngle = total / numReadings;
-    // send it to the computer as ASCII digits
-    PreviousSteer = averageHandleAngle;
-    
-  }  
-  steer_angle_count++;
-  if (steer_angle_count >= 150)
-    steer_angle_count = 101; 
-}
 
 void sendAngleDatatoSteer()
 {
   Serial1.write(255);
-  Serial1.write((int)averageHandleAngle); 
+  Serial1.write(23/*(int)averageHandleAngle*/); 
   Serial1.write((int)heading);
   Serial1.write(254);
 }
-
-/*********************************************************** END IMU functions ***************************************/
-
-/*********************************************************** Start BRAKING functions ***************************************/
 
 void CheckBreakingCondition()
 {
   boolean sonar_stop = digitalRead(STOPPIN);
   boolean manual_break = LOW;//digitalRead(MANUAL_BREAK_PIN);
-  //Serial.println("checking condition");
   
   if (sonar_stop || manual_break )
   {
     drive_flag = false; 
-  }
-  
+  } 
   else
   {
     drive_flag = true; 
   }
 }
 
-/*********************************************************** End BRAKING functions ***************************************/
-//void initMotor()
-//{
-// Timer1.attachInterrupt( timerIsr ); // attach the service routine here
-//// count = 0; 
-//}
-
-
-
 void claspMotor()
 {
-digitalWrite(BRAKE_PIN_P,LOW);
-digitalWrite(BRAKE_PIN_N,HIGH);
-
- Serial.println("  clasp");
-
-  
-  }
+  digitalWrite(BRAKE_PIN_P,LOW);
+  digitalWrite(BRAKE_PIN_N,HIGH);
+  Serial.println("  clasp");  
+}
 
 void stallMotor()
 {
   digitalWrite(BRAKE_PIN_P,LOW);
   digitalWrite(BRAKE_PIN_N,LOW);
-  Serial.println("  stall");
- 
-  }
+  Serial.println("  stall"); 
+}
 
 void releaseMotor()
 {
  digitalWrite(BRAKE_PIN_P,HIGH);
  digitalWrite(BRAKE_PIN_N,LOW);
  Serial.println("  release");
- 
-  }
+}
 
-
-//void releaseINT()
-//{
-//  //digitalWrite( 13, HIGH);
-////  Switch=1;
-// Timer1.detachInterrupt();   }
-
-
-
-/***************************************************************************************-*/
 void setup()
 {
   pinMode(STOPPIN, INPUT);
@@ -603,19 +438,35 @@ void setup()
   /*********************** Seat IMU routine ************************/
   /* Rotate the IMU "Takes some time" */ 
   /* Magnetometer default parameters */
-//  compass_x_offset = -785.89;
-//  compass_y_offset = 1243.25;
-//  compass_z_offset = 751.30;
-//  compass_x_gainError = 8.39;
-//  compass_y_gainError = 8.67;
-//  compass_z_gainError = 8.17;
+//  compass_x_offset = -497.58;
+//  compass_y_offset = 190.06;
+//  compass_z_offset = 593.02;
+//  compass_x_gainError = 3.16;
+//  compass_y_gainError = 3.23;
+//  compass_z_gainError = 3.07;
 
-compass_x_offset = -2336.07;
-compass_y_offset = 1118.47;
-compass_z_offset = 2092.34;
-compass_x_gainError = 8.37;
-compass_y_gainError = 8.65;
-compass_z_gainError = 8.13;  
+//  compass_x_offset = -987.23;
+//  compass_y_offset = 900.97;
+//  compass_z_offset = 2004.57;
+//  compass_x_gainError = 8.57;
+//  compass_y_gainError = 8.80;
+//  compass_z_gainError = 8.37;
+
+//  compass_x_offset = -2123.02;
+//  compass_y_offset = 777.09;
+//  compass_z_offset = 1843.77;
+//  compass_x_gainError = 8.55;
+//  compass_y_gainError = 8.80;
+//  compass_z_gainError = 8.37;
+
+  compass_x_offset = -2336.07;
+  compass_y_offset = 1118.47;
+  compass_z_offset = 2092.34;
+  compass_x_gainError = 8.37;
+  compass_y_gainError = 8.65;
+  compass_z_gainError = 8.13;  
+
+
 /*** Initialize and Calibrate Magnetometer ***/
 /* compass_offset_calibration(0) 
      Argument 
@@ -642,26 +493,8 @@ compass_z_gainError = 8.13;
   compAngleY = pitch;
   compAngleZ = MagYaw();
   timer = micros();
- /*********************** END Seat IMU routine ************************/ 
- /*********************** GPS init routine ************************/
+  
   gpsInit(); 
- /*********************** END GPS init routine ************************/ 
- /*********************** STEER IMU routine ************************/
-  Wire.beginTransmission(MPU_S);
-  Wire.write(0x6B);  // PWR_MGMT_1 register
-  Wire.write(0);     // set to zero (wakes up the MPU-6050)
-  Wire.endTransmission(true);
-  delay(100);
-
-  /* set gyro starting angle from accelerometer */
-  getRPY(MPU_S);
-  compAngleSteer = yaw;
-
-  /* Initialize the moving average reading */
-  for (int thisReading = 0; thisReading < numReadings; thisReading++) {
-    readings[thisReading] = 0;}
-/*********************** END STEER IMU routine ************************/
-/*********************** Drive motor routine **************************/ 
 
   pinMode(BRAKE_PIN_P, OUTPUT);
   pinMode(BRAKE_PIN_N, OUTPUT);
@@ -670,48 +503,42 @@ compass_z_gainError = 8.13;
 
   digitalWrite(STEER_BRAKE,LOW);
 
- 
- // Timer1.initialize(PRECISION); // set a timer of length 100000 microseconds (or 0.1 sec - or 10Hz => the led will blink 5 times, 5 cycles of on-and-off, per second)
-//  initMotor();
-
- /*********************** END Drive motor routine ************************/ 
- 
   controlDrive(0);
- delay(500);
- start_time=millis();
- durationFlag = 1;
-//Serial.println("asd");
+  delay(500);
+  start_time=millis();
+  durationFlag = 1;
+ // Serial.println("asd");
 }
-
 
 void loop()
 {
   updateRollPitchYaw();
-  updateSteerAngle();
   sendAngleDatatoSteer();
+  compass_heading();
 
-  gps_conditioning();
+//  gps_conditioning();
 //  handleGPSData();
-_print();
+  _print();
 
   
   current_time = millis();
  if ( current_time - start_time < 60000 &&  durationFlag == 1 )
 //   if (abs(g_distance) > 5 && LATI != 0 && LONGI != 0 && target_lati != 0 && target_longi != 0 &&  durationFlag == 1)
     {
-    CheckBreakingCondition();
-    
-    if (drive_flag)
-    {
-     brakeFlag = LOW;
+//    CheckBreakingCondition();
+//    
+//    if (drive_flag)
+//    {
+//     brakeFlag = LOW;
       controlDrive(77);
-    }
-
-    else 
-     { controlDrive(0);
-      brakeFlag = HIGH;
-    }
+//    }
+//
+//    else 
+//     { controlDrive(0);
+//      brakeFlag = HIGH;
+//    }
    }
+  
   else if (  durationFlag == 1)
    {
    controlDrive(0);
@@ -762,8 +589,7 @@ Serial.print("isr");
 //    Serial.print(count);
      stallMotor();
     //count=0;
-    }
-
-   
+    }  
 }
+
 

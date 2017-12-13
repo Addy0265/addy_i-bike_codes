@@ -77,9 +77,7 @@ String inputString1 = "";         // a string to hold incoming data
 boolean stringComplete1 = false;  // whether the string is complete
 String lati_str = "", longi_str = "";
 
-
 float target_lati = 0, target_longi = 0;
-
 
 volatile int start_time = 0, current_time = 0;
 int durationFlag = 0;
@@ -101,7 +99,6 @@ void Distance(float gpsLat0, float gpsLong0, float gpsLat, float gpsLong)
 //      Serial.print("For  "); Serial.print(gpsLat0); Serial.print(gpsLong0); Serial.print(gpsLat);Serial.print(gpsLong);
     }
 }
-
 
 void serialEvent2()
 {
@@ -259,13 +256,10 @@ void serialEvent1() {
 
 void _print()
 {
-      //Serial.print("Lati_from_PI : "); Serial.print(lati_str);
-      //Serial.print("\t Longi_from_PI : "); Serial.print(longi_str);
       Serial.print("\t Data from PI ");
       Serial.print("\t handle angle : "); Serial.print(averageHandleAngle);
       Serial.print("\t heading angle : "); Serial.println(heading);  
       Serial.println();
-
 }
 
 void handleGPSData()

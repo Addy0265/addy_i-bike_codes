@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.8)
+project( b_mean )
+find_package( OpenCV REQUIRED )
+add_executable( b_mean blurr_mean.cpp )
+target_link_libraries( b_mean ${OpenCV_LIBS} )
